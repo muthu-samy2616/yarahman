@@ -1,3 +1,15 @@
 .env
 logs/
 *.log
+node_modules/
+package.json
+package-lock.json
+check_errors.js
+deploy_sftp.js
+deploy.js
+check_server.js
+diag_upload.js
+get_logs.js
+read_error_log.js
+check_logs2.js
+check_hostinger_logs.js
