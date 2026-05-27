@@ -40,7 +40,6 @@ php_flag log_errors on
 php_value error_log logs/php_errors.log
 php_flag expose_php off
 php_value session.cookie_httponly 1
-# session.cookie_samesite is PHP 7.3+ only — removed to avoid 500 on PHP 7.2
 php_value session.use_strict_mode 1
 
 # ── Static Asset Caching ──────────────────────────────────
@@ -55,4 +54,5 @@ php_value session.use_strict_mode 1
 
 # ── GZIP Compression ──────────────────────────────────────
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/css application/java
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
