@@ -4,18 +4,12 @@
 
 require_once __DIR__ . '/../config/constants.php';
 
-// Secure session settings
+// Secure session settings — PHP 7.2 compatible (no array form, no samesite key)
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? 1 : 0);
-session_set_cookie_params([
-    'lifetime' => SESSION_LIFETIME,
-    'path'     => '/',
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
+session_set_cookie_params(SESSION_LIFETIME, '/');
 session_start();
 
 // ── CSRF Token Functions ──────────────────────────────────
