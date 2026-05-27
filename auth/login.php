@@ -20,17 +20,22 @@ if (empty($username) || empty($password)) {
 
 $ip = $_SERVER['REMOTE_ADDR'];
 
-// FIX S-007: Check login rate limiting
-$stmtCheck = $pdo->prepare("
-    SELECT COUNT(*) FROM login_attempts
-    WHERE ip_address = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE) AND success = 0
-");
-$stmtCheck->execute([$ip, LOGIN_LOCKOUT_MINUTES]);
-$failCount = (int)$stmtCheck->fetchColumn();
+// FIX S-007: Check login rate limiting (graceful if login_attempts table not yet migrated)
+try {
+    $stmtCheck = $pdo->prepare("
+        SELECT COUNT(*) FROM login_attempts
+        WHERE ip_address = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE) AND success = 0
+    ");
+    $stmtCheck->execute([$ip, LOGIN_LOCKOUT_MINUTES]);
+    $failCount = (int)$stmtCheck->fetchColumn();
 
-if ($failCount >= MAX_LOGIN_ATTEMPTS) {
-    header('Location: ../index.php?error=locked');
-    exit();
+    if ($failCount >= MAX_LOGIN_ATTEMPTS) {
+        header('Location: ../index.php?error=locked');
+        exit();
+    }
+} catch (\PDOException $e) {
+    error_log('login_attempts table missing — run migration_001_login_attempts.sql: ' . $e->getMessage());
+    $failCount = 0;
 }
 
 // Fetch user
@@ -45,8 +50,12 @@ $stmt->execute([$username]);
 $user = $stmt->fetch();
 
 if ($user && password_verify($password, $user['password'])) {
-    $pdo->prepare("INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, 1)")
-        ->execute([$ip, $username]);
+    try {
+        $pdo->prepare("INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, 1)")
+            ->execute([$ip, $username]);
+    } catch (\PDOException $e) {
+        error_log('login_attempts insert failed: ' . $e->getMessage());
+    }
 
     if ($user['is_active'] == 0) {
         header('Location: ../index.php?error=inactive');
@@ -76,8 +85,12 @@ if ($user && password_verify($password, $user['password'])) {
     exit();
 
 } else {
-    $pdo->prepare("INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, 0)")
-        ->execute([$ip, $username]);
+    try {
+        $pdo->prepare("INSERT INTO login_attempts (ip_address, username, success) VALUES (?, ?, 0)")
+            ->execute([$ip, $username]);
+    } catch (\PDOException $e) {
+        error_log('login_attempts insert failed: ' . $e->getMessage());
+    }
     header('Location: ../index.php?error=invalid&u=' . urlencode($username));
     exit();
 }
